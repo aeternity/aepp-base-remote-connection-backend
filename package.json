@@ -1,0 +1,20 @@
+{
+  "name": "webrtc-signaling-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aeternity/webrtc-signaling-server.git"
+  },
+  "author": "Denis Davidyuk <denis_davidyuk@hotmail.com>",
+  "private": true,
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/aeternity/webrtc-signaling-server/issues"
+  },
+  "homepage": "https://github.com/aeternity/webrtc-signaling-server#readme"
+}
