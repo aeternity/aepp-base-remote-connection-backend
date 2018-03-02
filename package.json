@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -16,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/aeternity/webrtc-signaling-server/issues"
   },
-  "homepage": "https://github.com/aeternity/webrtc-signaling-server#readme"
+  "homepage": "https://github.com/aeternity/webrtc-signaling-server#readme",
+  "dependencies": {
+    "socket.io": "^2.0.4"
+  }
 }
