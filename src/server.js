@@ -33,7 +33,7 @@ export default (port) => {
       const addFollower = async (fKey) => {
         if (leaderKeys[fKey]) {
           socket.emit('exception', `Client with key ${fKey} is already added to group`);
-          throw new Error('Already added to group room');
+          return;
         }
         leaderKeys[fKey] = key;
         const fSocket = io.sockets.sockets[fKey];
@@ -76,7 +76,10 @@ export default (port) => {
 
       socket.on('leave-group', () => {
         const leaderKey = leaderKeys[key];
-        if (!leaderKey) throw new Error('Not in a group');
+        if (!leaderKey) {
+          socket.emit('exception', 'Not in a group');
+          return;
+        }
         socket
           .leave(getGroupName(leaderKey))
           .emit('removed-from-group');

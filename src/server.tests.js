@@ -77,6 +77,13 @@ describe('leader interface', () => {
     ]);
   });
 
+  it('emits exception on adding the same follower twice', async () => {
+    const [, leader] = await leaderWithOneFollower();
+    leader.emit('add-follower', FOLLOWER_KEY);
+    const message = (await getEvent(leader, 'exception'))[0];
+    expect(message).to.be.equal(`Client with key ${FOLLOWER_KEY} is already added to group`);
+  });
+
   it('remove follower', async () => {
     const [follower, leader] = await leaderWithOneFollower();
     leader.emit('remove-follower', FOLLOWER_KEY);
@@ -130,6 +137,14 @@ describe('follower interface', () => {
       getEvent(follower, 'removed-from-group'),
     ]);
     expect(fKey).to.be.equal(FOLLOWER_KEY);
+  });
+
+  it('emits exception on leaving when is not in group', async () => {
+    const follower = io({ key: FOLLOWER_KEY });
+    await getEvent(follower, 'connect');
+    follower.emit('leave-group');
+    const message = (await getEvent(follower, 'exception'))[0];
+    expect(message).to.be.equal('Not in a group');
   });
 
   it('emit event on disconnect', async () => {
