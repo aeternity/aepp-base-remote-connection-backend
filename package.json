@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/aeternity/aepp-identity-remote-connection-backend#readme",
   "dependencies": {
+    "firebase-admin": "^6.1.0",
     "socket.io": "^2.1.0"
   },
   "devDependencies": {

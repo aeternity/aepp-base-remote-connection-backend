@@ -1,10 +1,12 @@
 import Server from 'socket.io';
+import { sendPushNotification } from './push.js'
 
 export default (port) => {
   const io = Server(port);
 
   const getGroupName = leaderKey => `${leaderKey}-group`;
   const leaderKeys = {};
+  const leaderTokens = {};
 
   // eslint-disable-next-line no-underscore-dangle
   io.engine.generateId = req => req._query.key || 'invalid-id';
@@ -18,17 +20,17 @@ export default (port) => {
   });
 
   io.on('connection', (socket) => {
-    const { key, followers: followersString } = socket.handshake.query;
-    const followers = followersString && followersString.split(',');
+    const { key, token } = socket.handshake.query;
 
     socket.on('message-to-all', message =>
       socket
-        .to(getGroupName(followers ? key : leaderKeys[key]))
+        .to(getGroupName(token ? key : leaderKeys[key]))
         .emit('message', message));
 
-    if (followers) {
+    if (token) {
       const groupName = getGroupName(key);
       socket.join(groupName);
+      leaderTokens[key] = token;
 
       const addFollower = async (fKey) => {
         if (leaderKeys[fKey]) {
@@ -52,7 +54,6 @@ export default (port) => {
         }
       };
 
-      followers.forEach(addFollower);
       socket.on('add-follower', addFollower);
       socket.on('remove-follower', removeFollower);
 
@@ -68,8 +69,13 @@ export default (port) => {
         socket.to(leaderKeys[key]).emit('follower-connected', key);
       }
 
-      socket.on('message-to-leader', message =>
-        socket.to(leaderKeys[key]).emit('message-from-follower', key, message));
+      socket.on('message-to-leader', (message) => {
+        if(socket.to(leaderKeys[key]).connected){
+          socket.to(leaderKeys[key]).emit('message-from-follower', key, message);
+        } else {
+          sendPushNotification(leaderTokens[leaderKeys[key]], key, message);
+        }
+      });
 
       socket.on('leave-group', () => {
         const leaderKey = leaderKeys[key];
