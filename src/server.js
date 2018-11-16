@@ -60,10 +60,7 @@ export default (port) => {
         socket.to(fKey).emit('message-from-leader', message));
 
       socket.on('disconnect', () =>
-        Object.entries(leaderKeys)
-          .filter(([, v]) => v === key)
-          .map(([k]) => k)
-          .forEach(removeFollower));
+        socket.to(getGroupName(key)).emit('leader-disconnected'));
     } else {
       if (leaderKeys[key]) {
         socket.join(getGroupName(leaderKeys[key]));
