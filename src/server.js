@@ -43,27 +43,24 @@ export default (port) => {
           socket.emit('follower-connected', fKey);
         }
       };
-      const removeFollower = async (fKey) => {
+
+      followers.forEach(addFollower);
+      socket.on('add-follower', addFollower);
+
+      socket.on('remove-follower', async (fKey) => {
         delete leaderKeys[fKey];
         const fSocket = io.sockets.sockets[fKey];
         if (fSocket) {
           fSocket.leave(groupName);
           fSocket.emit('removed-from-group');
         }
-      };
-
-      followers.forEach(addFollower);
-      socket.on('add-follower', addFollower);
-      socket.on('remove-follower', removeFollower);
+      });
 
       socket.on('message-to-follower', (fKey, message) =>
         socket.to(fKey).emit('message-from-leader', message));
 
       socket.on('disconnect', () =>
-        Object.entries(leaderKeys)
-          .filter(([, v]) => v === key)
-          .map(([k]) => k)
-          .forEach(removeFollower));
+        socket.to(getGroupName(key)).emit('leader-disconnected'));
     } else {
       if (leaderKeys[key]) {
         socket.join(getGroupName(leaderKeys[key]));

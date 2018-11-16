@@ -97,10 +97,10 @@ describe('leader interface', () => {
     expect(message).to.be.equal(MESSAGE);
   });
 
-  it('remove followers on disconnect', async () => {
+  it('leader left the group', async () => {
     const [follower, leader] = await leaderWithOneFollower();
     leader.close();
-    await getEvent(follower, 'removed-from-group');
+    await getEvent(follower, 'leader-disconnected');
   });
 });
 
