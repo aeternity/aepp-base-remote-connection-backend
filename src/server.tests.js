@@ -104,6 +104,13 @@ describe('leader interface', () => {
     leader.close();
     await getEvent(follower, 'leader-disconnected');
   });
+
+  it('get all followers', async () => {
+    const [, leader] = await leaderWithOneFollower();
+    leader.emit('get-all-followers');
+    const followers = await getEvent(leader, 'get-all-followers');
+    expect(followers[0][0]).to.be.equal(FOLLOWER_KEY);
+  });
 });
 
 describe('follower interface', () => {
