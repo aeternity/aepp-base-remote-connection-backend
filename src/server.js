@@ -60,6 +60,15 @@ export default (port) => {
         }
       });
 
+      socket.on('get-all-followers', fn => fn(Object.entries(leaderKeys)
+        .filter(([, v]) => v === key)
+        .map(([k]) => k)
+        .reduce((p, followerId) => Object.assign(
+          {},
+          p,
+          { [followerId]: { connected: !!io.sockets.sockets[followerId] } },
+        ), {})));
+
       socket.on('message-to-follower', (fKey, message) =>
         socket.to(fKey).emit('message-from-leader', message));
 
