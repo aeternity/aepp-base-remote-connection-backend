@@ -53,6 +53,11 @@ export default (port) => {
           fSocket.emit('removed-from-group');
         }
       };
+      socket.on('get-all-followers', () => {
+        const followers = Object.keys(io.sockets.sockets);
+        followers.splice(followers.indexOf(key), 1);
+        socket.emit('get-all-followers', followers);
+      });
 
       socket.on('add-follower', addFollower);
       socket.on('remove-follower', removeFollower);
