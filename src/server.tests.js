@@ -6,6 +6,7 @@ import createServer from './server';
 const PORT = 5428;
 const SERVER_URL = `http://localhost:${PORT}`;
 const TEST_KEY = '7914';
+const LEADER_TOKEN = 'token';
 const FOLLOWER_KEY = '8634';
 const MESSAGE = 'test-message';
 let server;
@@ -49,7 +50,8 @@ it('can\'t connect with the same key', async () => {
 const leaderWithOneFollower = async () => {
   const follower = io({ key: FOLLOWER_KEY });
   await getEvent(follower, 'connect');
-  const leader = io({ key: TEST_KEY, followers: [FOLLOWER_KEY] });
+  const leader = io({ key: TEST_KEY, token: LEADER_TOKEN });
+  leader.emit('add-follower', FOLLOWER_KEY);
   const [[fKey]] = await Promise.all([
     getEvent(leader, 'follower-connected'),
     getEvent(follower, 'added-to-group'),
@@ -60,14 +62,14 @@ const leaderWithOneFollower = async () => {
 
 describe('leader interface', () => {
   it('connect', async () => {
-    const socket = io({ key: TEST_KEY, followers: [1, 2, 3] });
+    const socket = io({ key: TEST_KEY, token: LEADER_TOKEN });
     await getEvent(socket, 'connect');
   });
 
   it('connect after follower is connected', leaderWithOneFollower);
 
   it('add follower', async () => {
-    const leader = io({ key: TEST_KEY, followers: ['0'] });
+    const leader = io({ key: TEST_KEY, token: LEADER_TOKEN });
     const follower = io({ key: FOLLOWER_KEY });
     await getEvent(follower, 'connect');
     leader.emit('add-follower', FOLLOWER_KEY);
@@ -97,10 +99,10 @@ describe('leader interface', () => {
     expect(message).to.be.equal(MESSAGE);
   });
 
-  it('remove followers on disconnect', async () => {
+  it('leader left the group', async () => {
     const [follower, leader] = await leaderWithOneFollower();
     leader.close();
-    await getEvent(follower, 'removed-from-group');
+    await getEvent(follower, 'leader-disconnected');
   });
 });
 
@@ -111,8 +113,9 @@ describe('follower interface', () => {
   });
 
   it('connect after leader is connected', async () => {
-    const leader = io({ key: TEST_KEY, followers: [FOLLOWER_KEY] });
+    const leader = io({ key: TEST_KEY, token: LEADER_TOKEN });
     await getEvent(leader, 'connect');
+    leader.emit('add-follower', FOLLOWER_KEY);
     const follower = io({ key: FOLLOWER_KEY });
     const [[fKey]] = await Promise.all([
       getEvent(leader, 'follower-connected'),
