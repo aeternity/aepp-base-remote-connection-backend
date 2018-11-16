@@ -1,5 +1,5 @@
 import Server from 'socket.io';
-import { sendPushNotification } from './push.js'
+import sendPushNotification from './push';
 
 export default (port) => {
   const io = Server(port);
@@ -75,7 +75,7 @@ export default (port) => {
       }
 
       socket.on('message-to-leader', (message) => {
-        if(socket.to(leaderKeys[key]).connected){
+        if (socket.to(leaderKeys[key]).connected) {
           socket.to(leaderKeys[key]).emit('message-from-follower', key, message);
         } else {
           sendPushNotification(leaderTokens[leaderKeys[key]], key, message);
