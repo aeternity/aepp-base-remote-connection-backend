@@ -4,50 +4,50 @@ import sendPushNotification from './push';
 export default (port) => {
   const io = Server(port);
 
-  const getGroupName = leaderKey => `${leaderKey}-group`;
-  const leaderKeys = {};
+  const getGroupName = leaderId => `${leaderId}-group`;
+  const leaderIds = {};
   const leaderTokens = {};
 
   // eslint-disable-next-line no-underscore-dangle
-  io.engine.generateId = req => req._query.key || 'invalid-id';
+  io.engine.generateId = req => req._query.id || 'invalid-id';
 
   io.sockets.use((socket, next) => {
-    const { key } = socket.handshake.query;
-    if (!key) next(new Error('Key is missed'));
-    else if (io.sockets.sockets[key]) {
-      next(new Error(`Already connected with this key: ${key}`));
+    const { id } = socket.handshake.query;
+    if (!id) next(new Error('id is missed'));
+    else if (io.sockets.sockets[id]) {
+      next(new Error(`Already connected with this id: ${id}`));
     } else next();
   });
 
   io.on('connection', (socket) => {
-    const { key, token } = socket.handshake.query;
+    const { id, token } = socket.handshake.query;
 
     socket.on('message-to-all', message =>
       socket
-        .to(getGroupName(token ? key : leaderKeys[key]))
+        .to(getGroupName(token ? id : leaderIds[id]))
         .emit('message', message));
 
     if (token) {
-      const groupName = getGroupName(key);
+      const groupName = getGroupName(id);
       socket.join(groupName);
-      leaderTokens[key] = token;
+      leaderTokens[id] = token;
 
-      const addFollower = async (fKey) => {
-        if (leaderKeys[fKey]) {
-          socket.emit('exception', `Client with key ${fKey} is already added to group`);
+      const addFollower = async (fid) => {
+        if (leaderIds[fid]) {
+          socket.emit('exception', `Client with id ${fid} is already added to group`);
           return;
         }
-        leaderKeys[fKey] = key;
-        const fSocket = io.sockets.sockets[fKey];
+        leaderIds[fid] = id;
+        const fSocket = io.sockets.sockets[fid];
         if (fSocket) {
           fSocket.join(groupName);
           fSocket.emit('added-to-group');
-          socket.emit('follower-connected', fKey);
+          socket.emit('follower-connected', fid);
         }
       };
-      const removeFollower = async (fKey) => {
-        delete leaderKeys[fKey];
-        const fSocket = io.sockets.sockets[fKey];
+      const removeFollower = async (fid) => {
+        delete leaderIds[fid];
+        const fSocket = io.sockets.sockets[fid];
         if (fSocket) {
           fSocket.leave(groupName);
           fSocket.emit('removed-from-group');
@@ -55,48 +55,48 @@ export default (port) => {
       };
       socket.on('get-all-followers', () => {
         const followers = Object.keys(io.sockets.sockets);
-        followers.splice(followers.indexOf(key), 1);
+        followers.splice(followers.indexOf(id), 1);
         socket.emit('get-all-followers', followers);
       });
 
       socket.on('add-follower', addFollower);
       socket.on('remove-follower', removeFollower);
 
-      socket.on('message-to-follower', (fKey, message) =>
-        socket.to(fKey).emit('message-from-leader', message));
+      socket.on('message-to-follower', (fid, message) =>
+        socket.to(fid).emit('message-from-leader', message));
 
       socket.on('disconnect', () =>
-        socket.to(getGroupName(key)).emit('leader-disconnected'));
+        socket.to(getGroupName(id)).emit('leader-disconnected'));
     } else {
-      if (leaderKeys[key]) {
-        socket.join(getGroupName(leaderKeys[key]));
+      if (leaderIds[id]) {
+        socket.join(getGroupName(leaderIds[id]));
         socket.emit('added-to-group');
-        socket.to(leaderKeys[key]).emit('follower-connected', key);
+        socket.to(leaderIds[id]).emit('follower-connected', id);
       }
 
       socket.on('message-to-leader', (message) => {
-        if (socket.to(leaderKeys[key]).connected) {
-          socket.to(leaderKeys[key]).emit('message-from-follower', key, message);
+        if (socket.to(leaderIds[id]).connected) {
+          socket.to(leaderIds[id]).emit('message-from-follower', id, message);
         } else {
-          sendPushNotification(leaderTokens[leaderKeys[key]], key, message);
+          sendPushNotification(leaderTokens[leaderIds[id]], id, message);
         }
       });
 
       socket.on('leave-group', () => {
-        const leaderKey = leaderKeys[key];
-        if (!leaderKey) {
+        const leaderId = leaderIds[id];
+        if (!leaderId) {
           socket.emit('exception', 'Not in a group');
           return;
         }
         socket
-          .leave(getGroupName(leaderKey))
+          .leave(getGroupName(leaderId))
           .emit('removed-from-group');
-        socket.to(leaderKey).emit('follower-removed', key);
-        delete leaderKeys[key];
+        socket.to(leaderId).emit('follower-removed', id);
+        delete leaderIds[id];
       });
 
       socket.on('disconnect', () =>
-        socket.to(leaderKeys[key]).emit('follower-disconnected', key));
+        socket.to(leaderIds[id]).emit('follower-disconnected', id));
     }
   });
 

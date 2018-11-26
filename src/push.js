@@ -7,13 +7,13 @@ admin.initializeApp({
   databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}.firebaseio.com`,
 });
 
-export default function sendPushNotification(token, key, message) {
+export default function sendPushNotification(token, id, message) {
   //  See documentation on defining a message payload.
 
   const notification = {
     notification: {
       body: message,
-      title: `Message from follower: ${key}`,
+      title: `Message from follower: ${id}`,
     },
     token,
   };
