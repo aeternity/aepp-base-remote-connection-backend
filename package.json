@@ -1,5 +1,5 @@
 {
-  "name": "aepp-identity-remote-connection-backend",
+  "name": "aepp-base-remote-connection-backend",
   "version": "1.0.0",
   "description": "",
   "scripts": {
@@ -12,15 +12,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aeternity/aepp-identity-remote-connection-backend.git"
+    "url": "git+https://github.com/aeternity/aepp-base-remote-connection-backend.git"
   },
   "author": "Denis Davidyuk <denis_davidyuk@hotmail.com>",
   "private": true,
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/aeternity/aepp-identity-remote-connection-backend/issues"
+    "url": "https://github.com/aeternity/aepp-base-remote-connection-backend/issues"
   },
-  "homepage": "https://github.com/aeternity/aepp-identity-remote-connection-backend#readme",
+  "homepage": "https://github.com/aeternity/aepp-base-remote-connection-backend#readme",
   "dependencies": {
     "socket.io": "^2.1.0"
   },
