@@ -1,10 +1,13 @@
 import Server from 'socket.io';
+import sendPushNotification from './send-push-notification';
 
 export default (port) => {
   const io = Server(port);
 
   const getGroupName = leaderKey => `${leaderKey}-group`;
   const leaderKeys = {};
+  const leaderPushApiSubscriptions = {};
+  const leaderMessages = {};
 
   // eslint-disable-next-line no-underscore-dangle
   io.engine.generateId = req => req._query.key || 'invalid-id';
@@ -18,19 +21,23 @@ export default (port) => {
   });
 
   io.on('connection', (socket) => {
-    const { key, followers: followersString } = socket.handshake.query;
-    const followers = followersString && followersString.split(',');
+    const { key, pushApiSubscription } = socket.handshake.query;
 
     socket.on('message-to-all', message =>
       socket
-        .to(getGroupName(followers ? key : leaderKeys[key]))
+        .to(getGroupName(pushApiSubscription ? key : leaderKeys[key]))
         .emit('message', message));
 
-    if (followers) {
+    if (pushApiSubscription) {
+      (leaderMessages[key] || []).forEach(messageToLeader =>
+        socket.emit('message-from-follower', messageToLeader.key, messageToLeader.message));
+      delete leaderMessages[key];
+
       const groupName = getGroupName(key);
       socket.join(groupName);
+      leaderPushApiSubscriptions[key] = pushApiSubscription;
 
-      const addFollower = async (fKey) => {
+      socket.on('add-follower', async (fKey) => {
         if (leaderKeys[fKey]) {
           socket.emit('exception', `Client with key ${fKey} is already added to group`);
           return;
@@ -42,28 +49,31 @@ export default (port) => {
           fSocket.emit('added-to-group');
           socket.emit('follower-connected', fKey);
         }
-      };
-      const removeFollower = async (fKey) => {
+      });
+
+      socket.on('remove-follower', async (fKey) => {
         delete leaderKeys[fKey];
         const fSocket = io.sockets.sockets[fKey];
         if (fSocket) {
           fSocket.leave(groupName);
           fSocket.emit('removed-from-group');
         }
-      };
+      });
 
-      followers.forEach(addFollower);
-      socket.on('add-follower', addFollower);
-      socket.on('remove-follower', removeFollower);
+      socket.on('get-all-followers', fn => fn(Object.entries(leaderKeys)
+        .filter(([, v]) => v === key)
+        .map(([k]) => k)
+        .reduce((p, followerId) => Object.assign(
+          {},
+          p,
+          { [followerId]: { connected: !!io.sockets.sockets[followerId] } },
+        ), {})));
 
       socket.on('message-to-follower', (fKey, message) =>
         socket.to(fKey).emit('message-from-leader', message));
 
       socket.on('disconnect', () =>
-        Object.entries(leaderKeys)
-          .filter(([, v]) => v === key)
-          .map(([k]) => k)
-          .forEach(removeFollower));
+        socket.to(getGroupName(key)).emit('leader-disconnected'));
     } else {
       if (leaderKeys[key]) {
         socket.join(getGroupName(leaderKeys[key]));
@@ -71,8 +81,17 @@ export default (port) => {
         socket.to(leaderKeys[key]).emit('follower-connected', key);
       }
 
-      socket.on('message-to-leader', message =>
-        socket.to(leaderKeys[key]).emit('message-from-follower', key, message));
+      socket.on('message-to-leader', async (message) => {
+        const lKey = leaderKeys[key];
+
+        if (!io.sockets.sockets[lKey]) {
+          leaderMessages[lKey] = leaderMessages[lKey] || [];
+          leaderMessages[lKey].push({ key, message });
+          await sendPushNotification(leaderPushApiSubscriptions[lKey]);
+        }
+
+        socket.to(lKey).emit('message-from-follower', key, message);
+      });
 
       socket.on('leave-group', () => {
         const leaderKey = leaderKeys[key];
