@@ -35,6 +35,7 @@ export default (port) => {
 
       const groupName = getGroupName(key);
       socket.join(groupName);
+      socket.to(getGroupName(key)).emit('leader-connected');
       leaderPushApiSubscriptions[key] = pushApiSubscription;
 
       socket.on('add-follower', async (fKey) => {
